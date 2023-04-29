@@ -1,0 +1,53 @@
+extensions:
+  health_check:
+  pprof:
+    endpoint: 0.0.0.0:1777
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'analys_node'
+          metrics_path: /probe
+          scrape_interval: 10s
+          params:
+            script: [analys_node]
+            prefix: [script]
+            params: [args]
+          static_configs:
+            - targets:
+              - 65.21.204.172:9469
+        - job_name: script_exporter
+          metrics_path: /metrics
+          scrape_interval: 10s
+          static_configs:
+            - targets: [65.21.204.172:9469]
+processors:
+  batch:
+
+exporters:
+   prometheus:
+     endpoint: 0.0.0.0:8889
+
+   #prometheusremotewrite:
+
+   otlphttp:
+     endpoint: http://otel.celestia.tools:4318
+
+   logging:
+     verbosity: detailed
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [batch]
+      exporters: [prometheus, otlphttp,logging]
+
+  extensions: [health_check, pprof, zpages]
